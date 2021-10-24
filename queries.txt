@@ -1,0 +1,143 @@
+Úloha 1:
+	EXPLAIN ANALYZE SELECT screen_name 
+	FROM accounts 
+	WHERE screen_name ~ '\yrealDonaldTrump\';
+Úloha 2:
+	EXPLAIN ANALYZE SELECT screen_name 
+	FROM accounts 
+	WHERE screen_name ~ '\yrealDonaldTrump\';
+
+	Zistenie max workerov:
+	SELECT current_settings('max_parallel_workers')::integer
+	AS max_workers, count(*) AS active_workers
+	FROM pg_stat_activity
+	WHERE backend_type = 'parallel worker';
+
+	Nastavenie workerov na 6:
+	SET max_parallel_workers_per_gather = 6;
+
+Úloha 3:
+	EXPLAIN ANALYZE SELECT screen_name 
+	FROM accounts 
+	WHERE screen_name ~ '\yrealDonaldTrump\';
+
+	Index:
+	CREATE INDEX btree_screen_name ON accounts USING btree (screen_name);
+
+Úloha 4:
+	EXPLAIN ANALYZE SELECT * FROM accounts WHERE followers_count BETWEEN 100 AND 200;
+
+Úloha 5:
+	EXPLAIN ANALYZE SELECT * FROM accounts WHERE followers_count BETWEEN 100 AND 200;
+
+	Index:
+	CREATE INDEX follow_count ON accounts (followers_count);
+
+Úloha 6:
+	EXPLAIN ANALYZE SELECT * FROM accounts WHERE followers_count BETWEEN 100 AND 1000;
+
+Úloha 7:
+	Indexy:
+	CREATE INDEX d_index ON accounts USING btree (description);
+	CREATE INDEX f_count ON accounts USING btree (friends_count);
+	CREATE INDEX nm ON accounts USING btree (name);
+
+	INSERT INTO accounts (id, screen_name, name, description, followers_count, friends_count, status_count)
+	VALUES (2232, 'test', 'test', 'test', 5, 5, 5);
+
+	INSERT INTO accounts (id, screen_name, name, description, followers_count, friends_count, status_count)
+	VALUES (223374, 'test1', 'test1', 'test1', 6, 6, 6);
+
+Úloha 8:
+	Indexy:
+	CREATE INDEX cont ON tweets USING btree (content);
+	CREATE INDEX ret_count ON tweets USING btree (retweet_count);
+
+Úloha 9:
+	Content:
+	SELECT * FROM bt_page_items('cont',1) LIMIT 1000;
+	SELECT * FROM bt_metap('cont');
+	SELECT type, live_items, dead_items, avg_item_size, page_size, free_size
+	FROM bt_page_stats('cont',1000);
+
+	Followers_count:
+	SELECT * FROM bt_page_items('follow_count',1) LIMIT 1000;
+	SELECT * FROM bt_metap('follow_count');
+	SELECT type, live_items, dead_items, avg_item_size, page_size, free_size
+	FROM bt_page_stats('follow_count',1000);
+
+	Retweet_count:
+	SELECT * FROM bt_page_items('ret_count',1) LIMIT 1000;
+	SELECT * FROM bt_metap('ret_count');
+	SELECT type, live_items, dead_items, avg_item_size, page_size, free_size
+	FROM bt_page_stats('ret_count',1000);
+
+	Screen_name:
+	SELECT * FROM bt_page_items('btree_screen_name',1) LIMIT 1000;
+	SELECT * FROM bt_metap('btree_screen_name');
+	SELECT type, live_items, dead_items, avg_item_size, page_size, free_size
+	FROM bt_page_stats('btree_screen_name',1000);
+
+Úloha 10:
+	EXPLAIN ANALYZE SELECT content FROM tweets WHERE content LIKE '%Gates%';
+
+Úloha 11:
+	EXPLAIN ANALYZE SELECT content FROM tweets WHERE content LIKE 'The Cable and Deep State%';
+	
+Úloha 12:
+	Index:
+	CREATE INDEX idx_like ON tweets (content text_pattern_ops);
+
+Úloha 13:
+	Index:
+	CREATE INDEX idx_q ON tweets (LOWER(REVERSE(content)) text_pattern_ops);
+
+	EXPLAIN ANALYZE SELECT * FROM tweets
+	WHERE LOWER(REVERSE(content)) LIKE LOWER(REVERSE('%idiot #QAnon'));
+
+Úloha 14:
+	Indexy:
+	použité z predošlých úloh +
+	CREATE INDEX stat_count ON accounts USING btree (statuses_count);
+
+	EXPLAIN ANALYZE SELECT * FROM accounts
+	WHERE followers_count < 10
+	AND friends_count > 1000
+	ORDER BY statuses_count;
+
+Úloha 15:
+	Index:
+	CREATE INDEX big_index ON accounts USING btree (friends_count, followers_count, statuses_count);
+
+Úloha 16:
+	EXPLAIN ANALYZE SELECT * FROM accounts
+	WHERE followers_count < 1000
+	AND friends_count > 1000
+	ORDER BY statuses_count;
+
+Úloha 17:
+	Index:
+	CREATE INDEX gin_screen_name ON accounts USING gin (screen_name gin_trgm_ops);
+	
+	EXPLAIN ANALYZE SELECT * FROM accounts
+	WHERE screen_name LIKE 'realDonaldTrump';
+
+	EXPLAIN ANALYZE SELECT * FROM accounts
+	WHERE screen_name LIKE '%ldonaldt%';
+
+Úloha 18:
+	Indexy:
+	CREATE INDEX j_o_accs ON accounts USING GIN (to_tsvector('english', name || ' ' || description));
+	CREATE INDEX j_o_tweets ON tweets USING GIN (to_tsvector('english', content));
+	CREATE INDEX auth_idx ON tweets USING BTREE (author_id);
+	ret_count použitý z predošlých úloh
+	
+	EXPLAIN ANALYZE SELECT a.name, a.description, t.content, t.retweet_count
+	FROM  tweets t INNER JOIN accounts a ON t.author_id = a.id
+	AND to_tsvector('english', a.name || ' ' || a.description) @@ to_tsquery('John & Oliver')
+	UNION
+	SELECT a.name, a.description, t.content, t.retweet_count  
+	FROM accounts a INNER JOIN tweets t ON a.id = t.author_id
+	AND to_tsvector('english', t.content) @@ to_tsquery('John & Oliver')
+	ORDER BY retweet_count DESC;
+ 	
